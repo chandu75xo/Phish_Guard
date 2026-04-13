@@ -1,0 +1,55 @@
+{% extends 'SProvider/base_admin.html' %}
+{% block title %}Analytics{% endblock %}
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+{% block admin_content %}
+<div class="page-header animate-fadeup">
+  <div class="breadcrumb">admin / <span>analytics</span></div>
+  <h1>Analytics</h1>
+  <p>Detection patterns and model performance overview.</p>
+</div>
+<div class="stat-grid mb-8 animate-fadeup delay-1">
+  <div class="stat-card" style="--accent:var(--cyan)"><div class="label">Total Analyzed</div><div class="value">{{ total }}</div></div>
+  <div class="stat-card" style="--accent:var(--red)"><div class="label">Phishing</div><div class="value text-red">{{ phishing }}</div><div class="sub">{{ phishing_ratio }}% of total</div></div>
+  <div class="stat-card" style="--accent:var(--green)"><div class="label">Safe</div><div class="value text-green">{{ safe }}</div></div>
+</div>
+<div class="grid-2 animate-fadeup delay-2">
+  <div class="card">
+    <div class="card-header"><h3><i class="ph ph-chart-pie text-cyan" style="margin-right:6px;"></i> Detection Ratio</h3><p>Phishing vs Non-Phishing breakdown</p></div>
+    {% if total > 0 %}<canvas id="ratioChart" height="240"></canvas>
+    {% else %}<div class="empty-state" style="padding:40px;"><div class="empty-icon"><i class="ph ph-chart-pie"></i></div><p>No predictions yet to chart.</p></div>{% endif %}
+  </div>
+  <div class="card">
+    <div class="card-header"><h3><i class="ph ph-cpu text-cyan" style="margin-right:6px;"></i> Model Accuracy</h3><p>Last training session results</p></div>
+    {% if accuracies %}<canvas id="accuracyChart" height="240"></canvas>
+    {% else %}<div class="empty-state" style="padding:40px;"><div class="empty-icon"><i class="ph ph-cpu"></i></div><p>No training data yet. <a href="{% url 'admin_train' %}">Train models</a></p></div>{% endif %}
+  </div>
+</div>
+{% if top_users %}
+<div class="card mt-6 animate-fadeup delay-3">
+  <div class="card-header"><h3><i class="ph ph-medal text-orange" style="margin-right:6px;"></i> Most Active Users</h3><p>Top 5 by prediction count</p></div>
+  <div style="display:flex;flex-direction:column;gap:0;">
+    {% for u in top_users %}
+    <div class="flex items-center gap-3" style="padding:12px 0;border-bottom:1px solid var(--border);">
+      <span style="font-family:var(--font-display);font-size:0.7rem;color:var(--text-dim);width:24px;">#{{ forloop.counter }}</span>
+      <span style="flex:1;font-weight:600;">{{ u.username }}</span>
+      <span class="badge badge-info"><i class="ph ph-magnifying-glass"></i> {{ u.pred_count }} scans</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+const chartDefaults={plugins:{legend:{labels:{color:'#e2e8f0',font:{family:'DM Sans',size:12}}}}};
+{% if total > 0 %}
+new Chart(document.getElementById('ratioChart'),{type:'doughnut',data:{labels:['Phishing','Non Phishing'],datasets:[{data:[{{ phishing }},{{ safe }}],backgroundColor:['rgba(252,129,129,0.8)','rgba(72,187,120,0.8)'],borderColor:['#fc8181','#48bb78'],borderWidth:2}]},options:{...chartDefaults,cutout:'65%'}});
+{% endif %}
+{% if accuracies %}
+const accData={{ accuracies_json|safe }};
+new Chart(document.getElementById('accuracyChart'),{type:'bar',data:{labels:accData.map(d=>d.model_name),datasets:[{label:'Accuracy %',data:accData.map(d=>d.accuracy),backgroundColor:'rgba(99,179,237,0.7)',borderColor:'#63b3ed',borderWidth:1,borderRadius:6}]},options:{...chartDefaults,scales:{y:{min:90,max:100,ticks:{color:'#718096'},grid:{color:'rgba(99,179,237,0.06)'}},x:{ticks:{color:'#718096'},grid:{display:false}}}}});
+{% endif %}
+</script>
+{% endblock %}

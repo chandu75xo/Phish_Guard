@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}Check a URL{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header animate-fadeup">
+    <div class="breadcrumb">phishguard / <span>predict</span></div>
+    <h1>URL Threat Scanner</h1>
+    <p>Paste any URL below. Our ensemble of 5 ML models will analyze it instantly.</p>
+  </div>
+
+  <div class="grid-2 animate-fadeup delay-1" style="align-items:start;">
+    <div>
+      <div class="card" style="border-color:rgba(99,179,237,0.2);">
+        <div class="card-header">
+          <h3><i class="ph ph-crosshair text-cyan" style="margin-right:6px;"></i> Enter URL to Analyze</h3>
+          <p>Full URL including https:// for best results</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">URL</label>
+          <textarea id="url-input" class="form-control" rows="5" placeholder="https://example.com/login?token=..."></textarea>
+        </div>
+        <button onclick="analyzeURL()" id="analyze-btn" class="btn btn-primary w-full btn-lg" style="justify-content:center;">
+          <i class="ph ph-magnifying-glass"></i> Analyze URL
+        </button>
+        <p class="mt-3" style="font-size:0.75rem;text-align:center;color:var(--text-dim);">
+          Press <kbd style="background:var(--bg-2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);font-family:var(--font-mono);font-size:0.75rem;">Ctrl+Enter</kbd> to analyze
+        </p>
+      </div>
+
+      <div class="card mt-4" style="background:rgba(99,179,237,0.03);">
+        <div class="card-header"><h3><i class="ph ph-lightbulb text-cyan" style="margin-right:6px;"></i> What to check?</h3></div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:0.85rem;">
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <i class="ph ph-fish text-red" style="flex-shrink:0;margin-top:2px;"></i>
+            <span><strong>Suspicious emails</strong> — hover over links and paste the URL here before clicking</span>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <i class="ph ph-chat-circle-dots text-orange" style="flex-shrink:0;margin-top:2px;"></i>
+            <span><strong>Unknown links</strong> — URLs shared on social media or messaging apps</span>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <i class="ph ph-bank text-cyan" style="flex-shrink:0;margin-top:2px;"></i>
+            <span><strong>Banking / login pages</strong> — verify before entering any credentials</span>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <i class="ph ph-gift text-green" style="flex-shrink:0;margin-top:2px;"></i>
+            <span><strong>Prize / deal links</strong> — "you've won" messages are classic phishing bait</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="results-panel">
+      <div class="card" id="waiting-state" style="text-align:center;padding:60px 40px;">
+        <div style="width:64px;height:64px;border-radius:16px;background:rgba(99,179,237,0.06);border:1px solid rgba(99,179,237,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;color:var(--text-dim);font-size:2rem;">
+          <i class="ph ph-shield"></i>
+        </div>
+        <h3 style="color:var(--text-muted);font-weight:600;">Awaiting URL</h3>
+        <p style="font-size:0.85rem;margin-top:8px;">Analysis results will appear here</p>
+      </div>
+
+      <div id="loading-state" style="display:none;" class="card">
+        <div style="text-align:center;padding:30px 20px 20px;">
+          <div style="width:64px;height:64px;border-radius:16px;background:rgba(99,179,237,0.08);border:1px solid rgba(99,179,237,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--cyan);font-size:2rem;">
+            <i class="ph ph-cpu"></i>
+          </div>
+          <h3 style="margin-bottom:6px;">Training Models...</h3>
+          <p style="font-size:0.85rem;margin-bottom:20px;">Running 5 ML algorithms on your URL</p>
+        </div>
+        <div style="padding:0 8px 20px;display:flex;flex-direction:column;gap:8px;" id="progress-steps">
+          <div class="progress-step" data-step="1">Loading dataset...</div>
+          <div class="progress-step" data-step="2">Naive Bayes...</div>
+          <div class="progress-step" data-step="3">SVM (LinearSVC)...</div>
+          <div class="progress-step" data-step="4">Logistic Regression...</div>
+          <div class="progress-step" data-step="5">Decision Tree + SGD...</div>
+          <div class="progress-step" data-step="6">Voting ensemble...</div>
+        </div>
+      </div>
+
+      <div id="result-state" style="display:none;">
+        <div id="verdict-card" class="card mb-4" style="text-align:center;padding:36px;">
+          <div id="verdict-icon" style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:2rem;"></div>
+          <div id="verdict-label" style="font-size:1.5rem;font-weight:800;font-family:var(--font-display);margin-bottom:6px;letter-spacing:0.02em;"></div>
+          <div id="verdict-sub" style="font-size:0.85rem;color:var(--text-muted);"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3><i class="ph ph-chart-bar text-cyan" style="margin-right:6px;"></i> Model Accuracy Breakdown</h3><p>Individual model performance on training data</p></div>
+          <div id="accuracy-bars" style="display:flex;flex-direction:column;gap:14px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.progress-step { font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim); transition:color 0.3s; padding:5px 8px; border-radius:6px; display:flex; align-items:center; gap:8px; }
+.progress-step::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--text-dim); flex-shrink:0; transition:background 0.3s; }
+.progress-step.active { color:var(--cyan); background:rgba(99,179,237,0.05); }
+.progress-step.active::before { background:var(--cyan); }
+.progress-step.done { color:var(--green); }
+.progress-step.done::before { background:var(--green); }
+</style>
+<script>
+let stepTimer;
+function animateSteps() {
+  const steps = document.querySelectorAll('.progress-step');
+  let i = 0;
+  stepTimer = setInterval(()=>{
+    if(i>0) steps[i-1].classList.remove('active');
+    if(i<steps.length){ steps[i].classList.add('active'); i++; }
+    else clearInterval(stepTimer);
+  },900);
+}
+function finishSteps() {
+  clearInterval(stepTimer);
+  document.querySelectorAll('.progress-step').forEach(s=>{ s.classList.remove('active'); s.classList.add('done'); });
+}
+function analyzeURL() {
+  const url = document.getElementById('url-input').value.trim();
+  if(!url){ alert('Please enter a URL to analyze.'); return; }
+  document.getElementById('waiting-state').style.display='none';
+  document.getElementById('result-state').style.display='none';
+  document.getElementById('loading-state').style.display='block';
+  document.getElementById('analyze-btn').disabled=true;
+  document.getElementById('analyze-btn').innerHTML='<span class="spinner"></span> Analyzing...';
+  document.querySelectorAll('.progress-step').forEach(s=>s.classList.remove('active','done'));
+  animateSteps();
+  fetch("{% url 'predict' %}",{
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':'{{ csrf_token }}'},
+    body:'url='+encodeURIComponent(url)
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    finishSteps();
+    document.getElementById('analyze-btn').disabled=false;
+    document.getElementById('analyze-btn').innerHTML='<i class="ph ph-magnifying-glass"></i> Analyze URL';
+    document.getElementById('loading-state').style.display='none';
+    document.getElementById('result-state').style.display='block';
+    if(data.success){
+      const isPhish=data.is_phishing;
+      const vc=document.getElementById('verdict-card');
+      vc.style.borderColor=isPhish?'rgba(252,129,129,0.4)':'rgba(72,187,120,0.4)';
+      vc.style.background=isPhish?'rgba(252,129,129,0.05)':'rgba(72,187,120,0.05)';
+      const vi=document.getElementById('verdict-icon');
+      vi.style.background=isPhish?'rgba(252,129,129,0.12)':'rgba(72,187,120,0.12)';
+      vi.style.border=`1px solid ${isPhish?'rgba(252,129,129,0.3)':'rgba(72,187,120,0.3)'}`;
+      vi.style.color=isPhish?'var(--red)':'var(--green)';
+      vi.innerHTML=isPhish?'<i class="ph ph-warning-diamond"></i>':'<i class="ph ph-shield-check"></i>';
+      document.getElementById('verdict-label').innerHTML=`<span style="color:${isPhish?'var(--red)':'var(--green)'}">${data.result}</span>`;
+      document.getElementById('verdict-sub').textContent=`Analyzed at ${data.checked_at}`;
+      const barsDiv=document.getElementById('accuracy-bars');
+      barsDiv.innerHTML='';
+      Object.entries(data.model_accuracies).sort((a,b)=>b[1]-a[1]).forEach(([name,acc])=>{
+        barsDiv.innerHTML+=`<div><div class="flex justify-between mb-2" style="font-size:0.82rem;"><span>${name}</span><span class="mono text-cyan">${acc}%</span></div><div class="progress"><div class="progress-bar" style="width:${acc}%"></div></div></div>`;
+      });
+    }
+  });
+}
+document.getElementById('url-input').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter') analyzeURL(); });
+</script>
+{% endblock %}

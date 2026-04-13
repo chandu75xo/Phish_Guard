@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: phishguard
+    runtime: python
+    buildCommand: "pip install -r requirements.txt && cd detection_of_phishing_websites && python manage.py migrate && python manage.py collectstatic --noinput"
+    startCommand: "cd detection_of_phishing_websites && gunicorn detection_of_phishing_websites.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.10.11"

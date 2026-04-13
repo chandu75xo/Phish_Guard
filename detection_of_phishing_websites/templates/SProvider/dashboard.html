@@ -1,0 +1,40 @@
+{% extends 'SProvider/base_admin.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block admin_content %}
+<div class="page-header animate-fadeup">
+  <div class="breadcrumb">admin / <span>dashboard</span></div>
+  <h1>Admin Dashboard</h1>
+  <p>System overview and recent activity.</p>
+</div>
+<div class="stat-grid mb-8 animate-fadeup delay-1">
+  <div class="stat-card" style="--accent:var(--cyan)"><div class="label">Total Users</div><div class="value">{{ total_users }}</div><div class="sub">registered accounts</div></div>
+  <div class="stat-card" style="--accent:var(--orange)"><div class="label">Total Predictions</div><div class="value">{{ total_predictions }}</div><div class="sub">URLs analyzed</div></div>
+  <div class="stat-card" style="--accent:var(--red)"><div class="label">Phishing Caught</div><div class="value text-red">{{ phishing_count }}</div><div class="sub">{{ phishing_pct }}% of total</div></div>
+  <div class="stat-card" style="--accent:var(--green)"><div class="label">Safe URLs</div><div class="value text-green">{{ safe_count }}</div><div class="sub">clean results</div></div>
+</div>
+<div class="card animate-fadeup delay-2">
+  <div class="card-header flex justify-between items-center">
+    <div><h3><i class="ph ph-clock-counter-clockwise text-cyan" style="margin-right:6px;"></i> Recent Predictions</h3><p>Latest URL checks across all users</p></div>
+    <a href="{% url 'admin_predictions' %}" class="btn btn-ghost btn-sm"><i class="ph ph-arrow-right"></i> View All</a>
+  </div>
+  {% if recent_predictions %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>URL</th><th>Result</th><th>User</th><th>Time</th></tr></thead>
+      <tbody>
+        {% for p in recent_predictions %}
+        <tr>
+          <td class="url-cell">{{ p.url }}</td>
+          <td><span class="badge {% if p.is_phishing %}badge-danger{% else %}badge-success{% endif %}"><i class="ph {% if p.is_phishing %}ph-warning-diamond{% else %}ph-check-circle{% endif %}"></i> {{ p.result }}</span></td>
+          <td style="font-size:0.82rem;color:var(--text-muted);">{{ p.user.username }}</td>
+          <td class="mono" style="font-size:0.75rem;color:var(--text-dim);">{{ p.checked_at|timesince }} ago</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><div class="empty-icon"><i class="ph ph-clipboard-text"></i></div><h3>No predictions yet</h3></div>
+  {% endif %}
+</div>
+{% endblock %}

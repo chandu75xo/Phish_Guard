@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block navbar %}
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="{% url 'admin_dashboard' %}" class="navbar-brand">
+      <div class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 6.5V12C3 16.95 7.02 21.54 12 23C16.98 21.54 21 16.95 21 12V6.5L12 2Z" fill="currentColor" opacity="0.9"/><path d="M8.5 12L10.8 14.3L15.5 9.5" stroke="var(--bg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Phish<span>Guard</span>
+      <span style="font-size:0.62rem;color:var(--orange);margin-left:6px;font-family:var(--font-display);letter-spacing:0.1em;background:rgba(246,173,85,0.1);padding:2px 8px;border-radius:4px;border:1px solid rgba(246,173,85,0.2);">ADMIN</span>
+    </a>
+    <div class="nav-links">
+      <a href="{% url 'landing' %}" class="hide-mobile" style="font-size:0.82rem;color:var(--text-dim);"><i class="ph ph-arrow-left"></i> Main Site</a>
+      <a href="{% url 'admin_logout' %}" class="btn-nav" style="background:var(--orange);"><i class="ph ph-sign-out"></i> Logout</a>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Overview</div>
+      <a href="{% url 'admin_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+        <span class="icon"><i class="ph ph-squares-four"></i></span> Dashboard
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Management</div>
+      <a href="{% url 'admin_users' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_users' %}active{% endif %}">
+        <span class="icon"><i class="ph ph-users"></i></span> Users
+      </a>
+      <a href="{% url 'admin_predictions' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_predictions' %}active{% endif %}">
+        <span class="icon"><i class="ph ph-crosshair"></i></span> Predictions
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">ML Engine</div>
+      <a href="{% url 'admin_train' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_train' %}active{% endif %}">
+        <span class="icon"><i class="ph ph-cpu"></i></span> Train Models
+      </a>
+      <a href="{% url 'admin_analytics' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_analytics' %}active{% endif %}">
+        <span class="icon"><i class="ph ph-chart-line-up"></i></span> Analytics
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Export</div>
+      <a href="{% url 'admin_export' %}" class="sidebar-link">
+        <span class="icon"><i class="ph ph-download-simple"></i></span> Download Excel
+      </a>
+    </div>
+  </aside>
+  <main class="main-content">
+    {% if messages %}<ul class="messages mb-4">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% block admin_content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

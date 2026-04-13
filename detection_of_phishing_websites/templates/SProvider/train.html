@@ -1,0 +1,75 @@
+{% extends 'SProvider/base_admin.html' %}
+{% block title %}Train Models{% endblock %}
+{% block admin_content %}
+<div class="page-header animate-fadeup">
+  <div class="breadcrumb">admin / <span>train</span></div>
+  <h1>ML Model Training</h1>
+  <p>Train all 6 models on the URL dataset and view accuracy scores.</p>
+</div>
+<div class="grid-2 animate-fadeup delay-1" style="align-items:start;">
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="ph ph-cpu text-cyan" style="margin-right:6px;"></i> Train All Models</h3>
+      <p>Runs Naive Bayes, SVM, Logistic Regression, Decision Tree, Random Forest, and SGD Classifier on 80/20 split.</p>
+    </div>
+    {% if last_trained %}
+    <div class="mb-4" style="padding:12px;background:rgba(72,187,120,0.06);border:1px solid rgba(72,187,120,0.2);border-radius:8px;font-size:0.82rem;display:flex;align-items:center;gap:8px;">
+      <i class="ph ph-check-circle text-green"></i> Last trained: <span class="mono">{{ last_trained|date:"M d, Y H:i" }}</span>
+    </div>
+    {% endif %}
+    <button id="train-btn" onclick="trainModels()" class="btn btn-lg w-full" style="background:var(--orange);color:var(--bg);justify-content:center;">
+      <i class="ph ph-play-circle"></i> Start Training
+    </button>
+    <div id="train-log" style="display:none;margin-top:20px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;font-family:var(--font-mono);font-size:0.76rem;color:var(--text-muted);line-height:2;max-height:260px;overflow-y:auto;"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3><i class="ph ph-chart-bar text-cyan" style="margin-right:6px;"></i> Last Training Results</h3><p>Model accuracy on test data</p></div>
+    <div id="accuracy-display">
+      {% if accuracies %}
+        {% for a in accuracies %}
+        <div style="margin-bottom:16px;">
+          <div class="flex justify-between mb-2" style="font-size:0.82rem;"><span>{{ a.model_name }}</span><span class="mono text-cyan">{{ a.accuracy }}%</span></div>
+          <div class="progress"><div class="progress-bar" style="width:{{ a.accuracy }}%"></div></div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="padding:30px;">
+          <div class="empty-icon"><i class="ph ph-cpu"></i></div>
+          <p>No training results yet. Run training to see accuracy scores.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function trainModels() {
+  const btn=document.getElementById('train-btn');
+  const log=document.getElementById('train-log');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span> Training... (1–2 min)';
+  log.style.display='block';
+  log.innerHTML='$ Initializing training pipeline...\n';
+  const steps=['Loading Website_urls.csv...','Vectorizing URL tokens with CountVectorizer...','Training Naive Bayes (MultinomialNB)...','Training SVM (LinearSVC)...','Training Logistic Regression (lbfgs)...','Training Decision Tree...','Training Random Forest (100 estimators)...','Training SGD Classifier...','Building Voting Ensemble...','Persisting accuracy results...'];
+  let i=0;
+  const timer=setInterval(()=>{ if(i<steps.length){ log.innerHTML+=`→ ${steps[i]}\n`; log.scrollTop=log.scrollHeight; i++; } else clearInterval(timer); },800);
+  fetch("{% url 'admin_train' %}",{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':'{{ csrf_token }}'},body:''})
+  .then(r=>r.json())
+  .then(data=>{
+    clearInterval(timer);
+    btn.disabled=false;
+    btn.innerHTML='<i class="ph ph-play-circle"></i> Start Training';
+    if(data.success){
+      log.innerHTML+=`\n✓ ${data.message}\n\nAccuracy Results:\n`;
+      const display=document.getElementById('accuracy-display');
+      display.innerHTML='';
+      Object.entries(data.results).sort((a,b)=>b[1]-a[1]).forEach(([name,acc])=>{
+        log.innerHTML+=`  ${name}: ${acc}%\n`;
+        display.innerHTML+=`<div style="margin-bottom:16px;"><div class="flex justify-between mb-2" style="font-size:0.82rem;"><span>${name}</span><span class="mono text-cyan">${acc}%</span></div><div class="progress"><div class="progress-bar" style="width:${acc}%"></div></div></div>`;
+      });
+    } else { log.innerHTML+=`\n[ERROR] ${data.error}\n`; }
+  });
+}
+</script>
+{% endblock %}

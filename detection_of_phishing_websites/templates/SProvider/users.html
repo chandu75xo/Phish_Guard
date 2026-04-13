@@ -1,0 +1,29 @@
+{% extends 'SProvider/base_admin.html' %}
+{% block title %}Users{% endblock %}
+{% block admin_content %}
+<div class="page-header animate-fadeup">
+  <div class="breadcrumb">admin / <span>users</span></div>
+  <h1>Registered Users</h1>
+  <p>{{ user_data|length }} total accounts.</p>
+</div>
+<div class="table-wrap animate-fadeup delay-1">
+  <table>
+    <thead><tr><th>#</th><th>Username</th><th>Email</th><th>Joined</th><th>Total Scans</th><th>Phishing</th><th>Safe</th></tr></thead>
+    <tbody>
+      {% for ud in user_data %}
+      <tr>
+        <td class="mono text-muted" style="font-size:0.75rem;">{{ forloop.counter }}</td>
+        <td style="font-weight:600;"><i class="ph ph-user text-cyan" style="margin-right:6px;"></i>{{ ud.user.username }}</td>
+        <td style="font-size:0.82rem;color:var(--text-muted);">{{ ud.user.email|default:"—" }}</td>
+        <td class="mono" style="font-size:0.75rem;color:var(--text-dim);">{{ ud.user.date_joined|date:"M d, Y" }}</td>
+        <td class="mono text-cyan">{{ ud.total }}</td>
+        <td><span class="badge {% if ud.phishing > 0 %}badge-danger{% else %}badge-info{% endif %}"><i class="ph ph-warning-diamond"></i> {{ ud.phishing }}</span></td>
+        <td><span class="badge badge-success"><i class="ph ph-check-circle"></i> {{ ud.safe }}</span></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No users registered yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

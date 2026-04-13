@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header animate-fadeup">
+    <div class="breadcrumb">phishguard / <span>dashboard</span></div>
+    <h1>Welcome back, {{ user.username }}</h1>
+    <p>Your URL scanning activity at a glance.</p>
+  </div>
+
+  <div class="stat-grid mb-8 animate-fadeup delay-1">
+    <div class="stat-card" style="--accent:var(--cyan)">
+      <div class="label">Total Scans</div><div class="value">{{ total }}</div><div class="sub">URLs checked</div>
+      <div class="icon"><i class="ph ph-magnifying-glass" style="font-size:2rem;opacity:0.1;position:absolute;right:20px;top:50%;transform:translateY(-50%);"></i></div>
+    </div>
+    <div class="stat-card" style="--accent:var(--red)">
+      <div class="label">Phishing Caught</div><div class="value text-red">{{ phishing_count }}</div><div class="sub">threats detected</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--green)">
+      <div class="label">Safe URLs</div><div class="value text-green">{{ safe_count }}</div><div class="sub">clean results</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--orange)">
+      <div class="label">Threat Rate</div><div class="value" style="color:var(--orange)">{{ phishing_pct }}%</div><div class="sub">of your scans</div>
+    </div>
+  </div>
+
+  <div class="grid-2 animate-fadeup delay-2">
+    <div class="card" style="border-color:rgba(99,179,237,0.2);">
+      <div class="card-header">
+        <h3><i class="ph ph-crosshair text-cyan" style="margin-right:6px;"></i> Quick URL Check</h3>
+        <p>Paste a URL below for instant analysis</p>
+      </div>
+      <div class="form-group">
+        <textarea id="quick-url" class="form-control" rows="3" placeholder="https://suspicious-site.example.com/login?redirect=..."></textarea>
+      </div>
+      <button onclick="quickCheck()" class="btn btn-primary w-full" id="quick-btn" style="justify-content:center;">
+        <i class="ph ph-magnifying-glass"></i> Analyze URL
+      </button>
+      <div id="quick-result" style="display:none; margin-top:16px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header flex justify-between items-center">
+        <div><h3><i class="ph ph-clock-counter-clockwise text-cyan" style="margin-right:6px;"></i> Recent Checks</h3><p>Your latest 6 scans</p></div>
+        <a href="{% url 'history' %}" class="btn btn-ghost btn-sm"><i class="ph ph-arrow-right"></i> All</a>
+      </div>
+      {% if recent_predictions %}
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for p in recent_predictions %}
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg-2);border-radius:8px;border:1px solid var(--border);">
+            <i class="ph {% if p.is_phishing %}ph-warning-diamond text-red{% else %}ph-check-circle text-green{% endif %}" style="font-size:1.1rem;flex-shrink:0;"></i>
+            <span class="url-cell" style="flex:1;max-width:200px;">{{ p.url }}</span>
+            <span class="badge {% if p.is_phishing %}badge-danger{% else %}badge-success{% endif %}">{{ p.result }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state" style="padding:30px;">
+          <div class="empty-icon"><i class="ph ph-magnifying-glass"></i></div>
+          <h3>No scans yet</h3><p>Check your first URL above!</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if total > 0 %}
+  <div class="card mt-6 animate-fadeup delay-3">
+    <div class="card-header">
+      <h3><i class="ph ph-chart-bar text-cyan" style="margin-right:6px;"></i> Scan Distribution</h3>
+      <p>Phishing vs safe URL breakdown</p>
+    </div>
+    <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div class="flex justify-between mb-2" style="font-size:0.82rem;"><span class="text-red"><i class="ph ph-warning-diamond"></i> Phishing</span><span class="mono text-red">{{ phishing_pct }}%</span></div>
+        <div class="progress mb-3"><div class="progress-bar danger" style="width:{{ phishing_pct }}%"></div></div>
+        <div class="flex justify-between mb-2" style="font-size:0.82rem;"><span class="text-green"><i class="ph ph-check-circle"></i> Safe</span><span class="mono text-green">{% widthratio safe_count total 100 %}%</span></div>
+        <div class="progress"><div class="progress-bar success" style="width:{% widthratio safe_count total 100 %}%"></div></div>
+      </div>
+      <div style="text-align:center;padding:20px 40px;background:var(--bg-2);border-radius:12px;border:1px solid var(--border);">
+        <div style="font-size:2.5rem;font-family:var(--font-display);font-weight:800;color:var(--text);">{{ total }}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--font-display);">Total URLs</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function quickCheck() {
+  const url = document.getElementById('quick-url').value.trim();
+  const btn = document.getElementById('quick-btn');
+  const result = document.getElementById('quick-result');
+  if (!url) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+  result.style.display = 'none';
+  fetch("{% url 'predict' %}", {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':'{{ csrf_token }}'},
+    body:'url='+encodeURIComponent(url)
+  })
+  .then(r=>r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ph ph-magnifying-glass"></i> Analyze URL';
+    result.style.display = 'block';
+    if (data.success) {
+      const isPhish = data.is_phishing;
+      result.innerHTML = `<div style="padding:16px;border-radius:10px;border:1px solid ${isPhish?'rgba(252,129,129,0.3)':'rgba(72,187,120,0.3)'};background:${isPhish?'rgba(252,129,129,0.08)':'rgba(72,187,120,0.08)'};">
+        <div style="font-weight:700;color:${isPhish?'var(--red)':'var(--green)'};font-size:1rem;margin-bottom:4px;">${isPhish?'⚑ PHISHING DETECTED':'✓ NON PHISHING — SAFE'}</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">Checked ${data.checked_at}</div></div>`;
+      setTimeout(()=>location.reload(),2000);
+    } else {
+      result.innerHTML = `<div style="color:var(--red);font-size:0.85rem;padding:12px;background:rgba(252,129,129,0.08);border-radius:8px;">${data.error}</div>`;
+    }
+  });
+}
+document.getElementById('quick-url').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter') quickCheck(); });
+</script>
+{% endblock %}
