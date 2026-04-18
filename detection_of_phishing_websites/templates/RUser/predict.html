@@ -3,26 +3,23 @@
 
 {% block extra_head %}
 <style>
-.char-counter{font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);text-align:right;margin-top:4px;transition:color 0.2s;}
+.char-counter{font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);text-align:right;margin-top:4px;}
 .char-counter.warn{color:var(--orange);}
-.url-preview{display:none;margin-top:10px;padding:10px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);word-break:break-all;line-height:1.5;}
+.url-preview{display:none;margin-top:8px;padding:8px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);word-break:break-all;}
 .url-preview.show{display:block;}
 .url-preview .pl{font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-display);margin-bottom:3px;}
-.help-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,179,237,0.1);border:1px solid rgba(99,179,237,0.2);color:var(--cyan);font-size:0.72rem;font-weight:700;cursor:pointer;transition:var(--transition);vertical-align:middle;margin-left:6px;font-family:var(--font-display);}
-.help-btn:hover{background:rgba(99,179,237,0.2);}
-/* Help modal */
+.help-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(99,179,237,0.1);border:1px solid rgba(99,179,237,0.2);color:var(--cyan);font-size:0.72rem;font-weight:700;cursor:pointer;transition:var(--transition);vertical-align:middle;margin-left:6px;font-family:var(--font-display);text-decoration:none;}
+.help-btn:hover{background:rgba(99,179,237,0.2);color:var(--cyan);}
 .help-overlay{position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
 .help-overlay.open{display:flex;}
 .help-modal{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:460px;width:100%;position:relative;animation:fadeUp 0.3s ease;}
-.help-modal h3{margin-bottom:18px;display:flex;align-items:center;gap:8px;}
-.help-step{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);}
-.help-step:last-child{border-bottom:none;}
-.help-num{width:28px;height:28px;border-radius:8px;background:rgba(99,179,237,0.1);border:1px solid rgba(99,179,237,0.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:0.8rem;font-weight:700;color:var(--cyan);flex-shrink:0;}
-.help-step-text strong{display:block;font-size:0.88rem;margin-bottom:3px;}
-.help-step-text p{font-size:0.8rem;margin:0;}
 .help-close{position:absolute;top:14px;right:14px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);transition:var(--transition);}
-.help-close:hover{color:var(--text);border-color:var(--border-glow);}
-/* State panels */
+.help-close:hover{color:var(--text);}
+.help-step{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border);}
+.help-step:last-child{border-bottom:none;}
+.help-num{width:26px;height:26px;border-radius:7px;background:rgba(99,179,237,0.1);border:1px solid rgba(99,179,237,0.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:0.75rem;font-weight:700;color:var(--cyan);flex-shrink:0;}
+.help-step strong{display:block;font-size:0.86rem;margin-bottom:2px;}
+.help-step p{font-size:0.78rem;margin:0;}
 .state-panel{display:none;}
 .state-panel.active{display:block;}
 @media(max-width:768px){.predict-grid{grid-template-columns:1fr !important;}}
@@ -33,15 +30,13 @@
 <div class="container">
   <div class="page-header animate-fadeup">
     <div class="breadcrumb">phishguard / <span>predict</span></div>
-    <h1>URL Scanner
-      <button class="help-btn" onclick="openHelp()" title="How to use">?</button>
-    </h1>
-    <p>Paste any URL and get a phishing verdict powered by 5 ML models.</p>
+    <h1>URL Scanner <a class="help-btn" onclick="openHelp()">?</a></h1>
+    <p>Paste a URL, get a phishing verdict from 5 ML models.</p>
   </div>
 
   <div class="grid-2 predict-grid animate-fadeup delay-1" style="align-items:start;">
 
-    <!-- ── Input Card ── -->
+    <!-- Input -->
     <div>
       <div class="card" style="border-color:rgba(99,179,237,0.2);">
         <div class="card-header">
@@ -50,7 +45,7 @@
         <div class="form-group">
           <label class="form-label">URL to Analyze</label>
           <textarea id="url-input" class="form-control" rows="4"
-            placeholder="https://example.com/path?query=value"
+            placeholder="https://example.com/page?token=abc"
             maxlength="2000" oninput="onURLInput(this)"></textarea>
           <div class="char-counter" id="char-counter">0 / 2000</div>
           <div class="url-preview" id="url-preview">
@@ -58,50 +53,45 @@
             <span id="url-preview-text"></span>
           </div>
         </div>
-        <button onclick="startAnalysis()" id="analyze-btn" class="btn btn-primary w-full btn-lg" style="justify-content:center;">
+        <button onclick="startAnalysis()" id="analyze-btn"
+          class="btn btn-primary w-full btn-lg" style="justify-content:center;">
           <i class="ph ph-magnifying-glass"></i> Analyze URL
         </button>
         <p class="mt-3" style="font-size:0.7rem;text-align:center;color:var(--text-dim);">
           <kbd style="background:var(--bg-2);padding:1px 5px;border-radius:4px;border:1px solid var(--border);font-family:var(--font-mono);">Ctrl+Enter</kbd>
-          to analyze · Analysis continues if you navigate away
+          · Analysis continues if you navigate away
         </p>
       </div>
     </div>
 
-    <!-- ── Results Column ── -->
+    <!-- Results -->
     <div>
-
-      <!-- Idle -->
       <div id="state-idle" class="state-panel active card" style="text-align:center;padding:52px 32px;">
         <div style="width:60px;height:60px;border-radius:14px;background:rgba(99,179,237,0.06);border:1px solid rgba(99,179,237,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--text-dim);font-size:1.8rem;"><i class="ph ph-shield"></i></div>
         <h3 style="color:var(--text-muted);">Awaiting URL</h3>
-        <p style="font-size:0.82rem;margin-top:6px;">Enter a URL on the left and click Analyze.</p>
+        <p style="font-size:0.82rem;margin-top:6px;">Enter a URL and click Analyze.</p>
       </div>
 
-      <!-- Submitted / polling -->
       <div id="state-running" class="state-panel card" style="text-align:center;padding:40px 28px;">
         <div style="width:60px;height:60px;border-radius:14px;background:rgba(99,179,237,0.08);border:1px solid rgba(99,179,237,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--cyan);font-size:1.8rem;"><i class="ph ph-cpu"></i></div>
         <h3 style="margin-bottom:6px;">Analysis Running</h3>
-        <p style="font-size:0.82rem;margin-bottom:4px;">Training 5 ML models on your URL...</p>
-        <p style="font-size:0.7rem;color:var(--text-dim);" id="running-elapsed">This takes 30–120 seconds</p>
-        <div style="margin-top:16px;height:4px;background:var(--bg-2);border-radius:2px;overflow:hidden;">
+        <p style="font-size:0.82rem;" id="running-elapsed">Training 5 ML models — 30–120 seconds</p>
+        <div style="margin-top:14px;height:4px;background:var(--bg-2);border-radius:2px;overflow:hidden;">
           <div id="running-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--orange));border-radius:2px;transition:width 1s linear;"></div>
         </div>
-        <p style="margin-top:12px;font-size:0.72rem;color:var(--text-dim);">
-          <i class="ph ph-info" style="margin-right:4px;"></i>
-          You can navigate to other pages — analysis will complete and notify you.
+        <p style="margin-top:10px;font-size:0.7rem;color:var(--text-dim);">
+          <i class="ph ph-info" style="margin-right:3px;"></i>You can browse other pages — a popup will notify you when done.
         </p>
       </div>
 
-      <!-- Error -->
       <div id="state-error" class="state-panel card" style="text-align:center;padding:40px 28px;">
         <div style="width:60px;height:60px;border-radius:14px;background:rgba(252,129,129,0.08);border:1px solid rgba(252,129,129,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--red);font-size:1.8rem;"><i class="ph ph-warning-circle"></i></div>
         <h3 style="color:var(--red);margin-bottom:8px;">Analysis Failed</h3>
-        <p id="error-msg" style="font-size:0.82rem;margin-bottom:20px;"></p>
+        <p id="error-msg" style="font-size:0.82rem;margin-bottom:6px;"></p>
+        <p id="error-detail" style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim);word-break:break-all;margin-bottom:20px;display:none;"></p>
         <button onclick="resetIdle()" class="btn btn-secondary btn-sm"><i class="ph ph-arrow-counter-clockwise"></i> Try Again</button>
       </div>
 
-      <!-- Result -->
       <div id="state-result" class="state-panel">
         <div id="verdict-card" class="card mb-4" style="text-align:center;padding:30px;">
           <div id="verdict-icon" style="width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:1.8rem;"></div>
@@ -113,35 +103,36 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><h3><i class="ph ph-chart-bar text-cyan" style="margin-right:6px;"></i>Model Accuracy</h3></div>
+          <div class="card-header">
+            <h3><i class="ph ph-chart-bar text-cyan" style="margin-right:6px;"></i>Model Accuracy</h3>
+          </div>
           <div id="accuracy-bars" style="display:flex;flex-direction:column;gap:12px;"></div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- ── Help Modal ── -->
+<!-- Help Modal -->
 <div class="help-overlay" id="help-overlay">
   <div class="help-modal">
     <button class="help-close" onclick="closeHelp()"><i class="ph ph-x"></i></button>
-    <h3><i class="ph ph-question text-cyan"></i> How to use PhishGuard</h3>
+    <h3 style="margin-bottom:16px;"><i class="ph ph-question text-cyan"></i> How to use</h3>
     <div class="help-step">
       <div class="help-num">1</div>
-      <div class="help-step-text"><strong>Copy a suspicious URL</strong><p>Hover over a link in an email or message to see the full URL, then copy it.</p></div>
+      <div><strong>Copy a suspicious URL</strong><p>Hover over a link in email or chat — right click → Copy Link.</p></div>
     </div>
     <div class="help-step">
       <div class="help-num">2</div>
-      <div class="help-step-text"><strong>Paste it here</strong><p>Paste the full URL into the text box — including <code>https://</code>.</p></div>
+      <div><strong>Paste it here</strong><p>Paste the full URL including <code>https://</code> into the box above.</p></div>
     </div>
     <div class="help-step">
       <div class="help-num">3</div>
-      <div class="help-step-text"><strong>Click Analyze URL</strong><p>5 ML models train and vote on the result. Takes 30–120 seconds.</p></div>
+      <div><strong>Click Analyze URL</strong><p>5 ML models train and vote. Takes 30–120 seconds on first check, instant after that.</p></div>
     </div>
     <div class="help-step">
       <div class="help-num">4</div>
-      <div class="help-step-text"><strong>Read your verdict</strong><p><strong style="color:var(--green)">Non Phishing</strong> = safe to visit. <strong style="color:var(--red)">Phishing</strong> = do not click. A popup appears wherever you are in the app.</p></div>
+      <div><strong>Read your verdict</strong><p><strong style="color:var(--green)">Non Phishing</strong> = safe. <strong style="color:var(--red)">Phishing</strong> = do not visit. A popup appears wherever you are in the app.</p></div>
     </div>
   </div>
 </div>
@@ -149,15 +140,11 @@
 
 {% block extra_js %}
 <script>
-let currentJobId  = null;
-let elapsedSec    = 0;
-let elapsedTimer  = null;
-const MAX_S       = 300;
+let elapsedTimer = null;
 
-// ── URL input ──
 function onURLInput(el) {
   const len = el.value.length;
-  const cc  = document.getElementById('char-counter');
+  const cc = document.getElementById('char-counter');
   cc.textContent = `${len} / 2000`;
   cc.classList.toggle('warn', len > 1800);
   const preview = document.getElementById('url-preview');
@@ -170,49 +157,38 @@ function onURLInput(el) {
   } catch { preview.classList.remove('show'); }
 }
 
-// ── State switching ──
 function showState(id) {
-  ['state-idle','state-running','state-error','state-result'].forEach(s => {
-    document.getElementById(s).classList.toggle('active', s === id);
-  });
+  ['state-idle','state-running','state-error','state-result'].forEach(s =>
+    document.getElementById(s).classList.toggle('active', s === id));
 }
+
 function resetIdle() {
+  clearInterval(elapsedTimer);
   showState('state-idle');
-  currentJobId = null;
-  stopElapsed();
   document.getElementById('url-input').value = '';
   document.getElementById('char-counter').textContent = '0 / 2000';
   document.getElementById('url-preview').classList.remove('show');
 }
 
-// ── Elapsed counter (local, on this page only) ──
-function startElapsed() {
-  elapsedSec = 0;
-  stopElapsed();
-  elapsedTimer = setInterval(() => {
-    elapsedSec++;
-    const bar = document.getElementById('running-bar');
-    bar.style.width = Math.min((elapsedSec / MAX_S) * 100, 100) + '%';
-    const lbl = document.getElementById('running-elapsed');
-    lbl.textContent = elapsedSec < 60
-      ? `${elapsedSec}s elapsed — please wait...`
-      : `${Math.floor(elapsedSec/60)}m ${elapsedSec%60}s elapsed...`;
-  }, 1000);
+function showError(msg, detail) {
+  clearInterval(elapsedTimer);
+  showState('state-error');
+  document.getElementById('error-msg').textContent = msg;
+  const det = document.getElementById('error-detail');
+  if (detail) { det.textContent = detail; det.style.display = 'block'; }
+  else { det.style.display = 'none'; }
 }
-function stopElapsed() { clearInterval(elapsedTimer); }
 
-// ── Start analysis ──
 function startAnalysis() {
   const url = document.getElementById('url-input').value.trim();
-  if (!url) { showToast('Please enter a URL to analyze', 'error'); return; }
-  if (!url.includes('.')) { showToast('Enter a valid URL (e.g. https://example.com)', 'error'); return; }
+  if (!url) { showToast('Please enter a URL', 'error'); return; }
 
   const btn = document.getElementById('analyze-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Starting...';
 
   fetch("{% url 'predict' %}", {
-    method:  'POST',
+    method: 'POST',
     headers: {
       'Content-Type':     'application/x-www-form-urlencoded',
       'X-CSRFToken':      '{{ csrf_token }}',
@@ -220,86 +196,98 @@ function startAnalysis() {
     },
     body: 'url=' + encodeURIComponent(url),
   })
-  .then(r => {
-    if (r.status === 401) return r.json().then(d => { throw { type:'auth', redirect: d.redirect }; });
-    if (!r.ok)            return r.json().then(d => { throw { type:'error', msg: d.error||'Server error' }; });
-    return r.json();
-  })
-  .then(data => {
+  .then(async response => {
     btn.disabled = false;
     btn.innerHTML = '<i class="ph ph-magnifying-glass"></i> Analyze URL';
 
-    if (data.success) {
-      currentJobId = data.job_id;
-      showState('state-running');
-      startElapsed();
-      // Hand off to global job tracker — it polls and shows the modal
-      if (window.startGlobalJob) window.startGlobalJob(data.job_id);
-      showToast('Analysis started — results will pop up when ready', 'info', 4000);
-    } else {
-      showState('state-error');
-      document.getElementById('error-msg').textContent = data.error || 'Failed to start analysis.';
+    // Always read the body text first so we can show it on errors
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch(e) {
+      // Not JSON — could be CSRF 403, 500 error page, etc.
+      if (response.status === 403) {
+        showError(
+          'Access blocked (CSRF error). Please refresh the page and try again.',
+          `HTTP ${response.status}`
+        );
+      } else {
+        showError(
+          `Server error (HTTP ${response.status}). Please try again.`,
+          text.substring(0, 200)
+        );
+      }
+      return;
     }
+
+    if (data.error === 'session_expired' || response.status === 401) {
+      showToast('Session expired — redirecting to login', 'error', 4000);
+      setTimeout(() => { window.location.href = data.redirect || '/login/'; }, 1500);
+      showState('state-idle');
+      return;
+    }
+
+    if (!data.success) {
+      showError(data.error || 'Failed to start analysis.');
+      return;
+    }
+
+    // Job created successfully — hand to global tracker
+    showState('state-running');
+    startElapsed();
+    if (window.startGlobalJob) window.startGlobalJob(data.job_id);
+    showToast('Analysis started — a popup will notify you when done', 'info', 4000);
   })
   .catch(err => {
     btn.disabled = false;
     btn.innerHTML = '<i class="ph ph-magnifying-glass"></i> Analyze URL';
-    if (err.type === 'auth') {
-      showToast('Session expired — redirecting to login', 'error', 4000);
-      setTimeout(() => { window.location.href = err.redirect || '/login/'; }, 1500);
-    } else {
-      showState('state-error');
-      document.getElementById('error-msg').textContent = err.msg || 'Connection error. Please try again.';
-    }
+    showError('Could not reach the server. Check your internet connection.', err.message);
   });
 }
 
-// ── Receive result from global tracker (if user stays on this page) ──
-window.onGlobalJobDone = function(data) {
-  stopElapsed();
-  showState('state-result');
+function startElapsed() {
+  let sec = 0;
+  clearInterval(elapsedTimer);
+  elapsedTimer = setInterval(() => {
+    sec++;
+    document.getElementById('running-bar').style.width = Math.min(sec/180*100,95)+'%';
+    document.getElementById('running-elapsed').textContent =
+      sec < 60 ? `Training models — ${sec}s elapsed...`
+               : `Training models — ${Math.floor(sec/60)}m ${sec%60}s elapsed...`;
+  }, 1000);
+}
 
+// Called by global tracker when job finishes
+window.onGlobalJobDone = function(data) {
+  clearInterval(elapsedTimer);
+  showState('state-result');
   const isPhish = data.is_phishing;
   const vc = document.getElementById('verdict-card');
   vc.style.borderColor = isPhish ? 'rgba(252,129,129,0.4)' : 'rgba(72,187,120,0.4)';
   vc.style.background  = isPhish ? 'rgba(252,129,129,0.05)' : 'rgba(72,187,120,0.05)';
-
   const vi = document.getElementById('verdict-icon');
   vi.style.background = isPhish ? 'rgba(252,129,129,0.12)' : 'rgba(72,187,120,0.12)';
-  vi.style.border     = `1px solid ${isPhish?'rgba(252,129,129,0.3)':'rgba(72,187,120,0.3)'}`;
-  vi.style.color      = isPhish ? 'var(--red)' : 'var(--green)';
-  vi.innerHTML        = isPhish ? '<i class="ph ph-warning-diamond"></i>' : '<i class="ph ph-shield-check"></i>';
-
+  vi.style.border  = `1px solid ${isPhish?'rgba(252,129,129,0.3)':'rgba(72,187,120,0.3)'}`;
+  vi.style.color   = isPhish ? 'var(--red)' : 'var(--green)';
+  vi.innerHTML     = isPhish ? '<i class="ph ph-warning-diamond"></i>' : '<i class="ph ph-shield-check"></i>';
   document.getElementById('verdict-label').innerHTML =
     `<span style="color:${isPhish?'var(--red)':'var(--green)'}">${data.result}</span>`;
   document.getElementById('verdict-time').textContent = `Analyzed at ${data.checked_at}`;
-
   const bars = document.getElementById('accuracy-bars');
   bars.innerHTML = '';
   if (data.model_accuracies) {
-    Object.entries(data.model_accuracies).sort((a,b)=>b[1]-a[1]).forEach(([name,acc])=>{
+    Object.entries(data.model_accuracies).sort((a,b)=>b[1]-a[1]).forEach(([n,a]) => {
       bars.innerHTML += `<div>
         <div class="flex justify-between mb-2" style="font-size:0.8rem;">
-          <span>${name}</span><span class="mono text-cyan">${acc}%</span>
+          <span>${n}</span><span class="mono text-cyan">${a}%</span>
         </div>
-        <div class="progress"><div class="progress-bar" style="width:${acc}%"></div></div>
+        <div class="progress"><div class="progress-bar" style="width:${a}%"></div></div>
       </div>`;
     });
   }
 };
-
-window.onGlobalJobError = function(msg) {
-  stopElapsed();
-  showState('state-error');
-  document.getElementById('error-msg').textContent = msg;
-};
-
-window.onGlobalJobCancelled = function() {
-  stopElapsed();
-  if (document.getElementById('state-running').classList.contains('active')) {
-    showState('state-idle');
-  }
-};
+window.onGlobalJobError    = msg => { clearInterval(elapsedTimer); showError('Analysis failed: ' + msg); };
+window.onGlobalJobCancelled = ()  => { clearInterval(elapsedTimer); showState('state-idle'); };
 
 function copyURLToClipboard() {
   const url = document.getElementById('url-input').value.trim();
@@ -310,11 +298,10 @@ document.getElementById('url-input').addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 'Enter') startAnalysis();
 });
 
-// ── Help modal ──
 function openHelp()  { document.getElementById('help-overlay').classList.add('open'); }
 function closeHelp() { document.getElementById('help-overlay').classList.remove('open'); }
-document.getElementById('help-overlay').addEventListener('click', function(e) {
-  if (e.target === this) closeHelp();
+document.getElementById('help-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('help-overlay')) closeHelp();
 });
 </script>
 {% endblock %}

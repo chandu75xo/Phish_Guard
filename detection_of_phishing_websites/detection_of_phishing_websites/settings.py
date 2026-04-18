@@ -6,7 +6,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='dev-insecure-key-change-in-production-now')
 DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -50,12 +49,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'detection_of_phishing_websites.wsgi.application'
 
-# ── Database ─────────────────────────────────────────────────────────────────
-# Uses PostgreSQL on Render (via DATABASE_URL env var) and SQLite locally.
-# On Render free tier, SQLite is ephemeral — PostgreSQL is required for
-# persistent user accounts and predictions.
+# ── Database ──────────────────────────────────────────────────────────────────
 _db_url = config('DATABASE_URL', default=None)
-
 if _db_url:
     DATABASES = {
         'default': dj_database_url.parse(
@@ -72,18 +67,31 @@ else:
         }
     }
 
-# ── Session settings ──────────────────────────────────────────────────────────
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 14   # 14 days
+# ── Session ───────────────────────────────────────────────────────────────────
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
-# ── CSRF trusted origins (required for Render / production) ──────────────────
-CSRF_TRUSTED_ORIGINS = config(
-    'CSRF_TRUSTED_ORIGINS',
-    default='http://127.0.0.1,http://localhost',
-    cast=Csv()
-)
+# ── CSRF ──────────────────────────────────────────────────────────────────────
+# Build CSRF_TRUSTED_ORIGINS from ALLOWED_HOSTS automatically so it always
+# matches the deployed domain without needing a separate env variable.
+# Handles http (dev) and https (production) for every allowed host.
+def _build_csrf_origins(allowed_hosts):
+    origins = ['http://127.0.0.1', 'http://127.0.0.1:8000',
+               'http://localhost',  'http://localhost:8000']
+    for host in allowed_hosts:
+        if host in ('*', ''):
+            continue
+        if host.startswith('.'):
+            host = host[1:]
+        origins.append(f'http://{host}')
+        origins.append(f'https://{host}')
+    return list(dict.fromkeys(origins))   # deduplicate, preserve order
+
+_allowed = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
+ALLOWED_HOSTS = _allowed
+CSRF_TRUSTED_ORIGINS = _build_csrf_origins(_allowed)
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
