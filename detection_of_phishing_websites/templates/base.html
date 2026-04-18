@@ -640,6 +640,304 @@ window.copyToClipboard = function(text, label = 'Copied') {
   });
 };
 </script>
+
 {% block extra_js %}{% endblock %}
+
+<!-- ═══════════════════════════════════════════════════════════
+     GLOBAL PREDICTION WIDGET
+     Floats on every authenticated page, polls for job status,
+     pops up result modal wherever the user is in the app.
+═══════════════════════════════════════════════════════════ -->
+{% if user.is_authenticated %}
+<style>
+/* Floating analysis pill */
+.global-pill {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 9000; opacity: 0; pointer-events: none;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  white-space: nowrap;
+}
+.global-pill.visible {
+  opacity: 1; pointer-events: all;
+  transform: translateX(-50%) translateY(0);
+}
+.global-pill-inner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; border-radius: 100px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  font-size: 0.84rem; font-weight: 600; color: var(--text);
+  backdrop-filter: blur(12px);
+}
+.global-pill-inner .spinner { flex-shrink: 0; }
+.global-pill-cancel {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; padding: 2px; font-size: 0.9rem;
+  transition: color 0.2s; margin-left: 4px;
+}
+.global-pill-cancel:hover { color: var(--red); }
+
+/* Result modal */
+.result-modal-overlay {
+  position: fixed; inset: 0; z-index: 9100;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.result-modal-overlay.open { display: flex; }
+.result-modal {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 24px; padding: 36px 32px;
+  max-width: 500px; width: 100%; position: relative;
+  animation: fadeUp 0.35s ease;
+  text-align: center;
+}
+.result-modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 8px; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-muted); font-size: 0.9rem;
+  transition: var(--transition);
+}
+.result-modal-close:hover { color: var(--text); border-color: var(--border-glow); }
+.result-modal-icon {
+  width: 72px; height: 72px; border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 18px; font-size: 2.2rem;
+}
+.result-modal-verdict {
+  font-family: var(--font-display); font-size: 1.6rem;
+  font-weight: 800; margin-bottom: 8px;
+}
+.result-modal-url {
+  font-family: var(--font-mono); font-size: 0.72rem;
+  color: var(--text-dim); word-break: break-all;
+  padding: 10px 14px; background: var(--bg-2);
+  border-radius: 8px; margin: 12px 0 20px;
+  max-height: 60px; overflow: hidden; text-overflow: ellipsis;
+}
+.result-modal-bars { text-align: left; margin-bottom: 20px; }
+.result-modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+@media(max-width:768px) {
+  .global-pill { bottom: calc(var(--bottom-nav-h) + 12px); }
+  .result-modal { padding: 28px 20px; }
+}
+</style>
+
+<!-- Floating pill -->
+<div class="global-pill" id="global-pill">
+  <div class="global-pill-inner">
+    <span class="spinner"></span>
+    <span id="global-pill-label">Analyzing URL...</span>
+    <span id="global-pill-elapsed" class="mono" style="font-size:0.72rem;color:var(--text-dim);"></span>
+    <button class="global-pill-cancel" id="global-pill-cancel" title="Cancel">
+      <i class="ph ph-x"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Result modal -->
+<div class="result-modal-overlay" id="result-modal-overlay">
+  <div class="result-modal">
+    <button class="result-modal-close" onclick="closeResultModal()"><i class="ph ph-x"></i></button>
+    <div class="result-modal-icon" id="rmi-icon"></div>
+    <div class="result-modal-verdict" id="rmi-verdict"></div>
+    <p id="rmi-time" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;"></p>
+    <div class="result-modal-url" id="rmi-url"></div>
+    <div class="result-modal-bars" id="rmi-bars"></div>
+    <div class="result-modal-actions">
+      <a href="/predict/" class="btn btn-ghost btn-sm"><i class="ph ph-magnifying-glass"></i> Check Another</a>
+      <a href="/history/" class="btn btn-ghost btn-sm"><i class="ph ph-clock-counter-clockwise"></i> View History</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── Constants ──
+  const STORAGE_KEY  = 'pg_active_job';
+  const POLL_MS      = 3000;
+  const MAX_POLL_S   = 300;  // stop polling after 5 min
+
+  let pollTimer     = null;
+  let elapsedSec    = 0;
+  let elapsedTimer  = null;
+  let activeJobId   = null;
+
+  // ── Restore job from sessionStorage on page load ──
+  const storedJob = sessionStorage.getItem(STORAGE_KEY);
+  if (storedJob) {
+    try {
+      const { jobId, startTime } = JSON.parse(storedJob);
+      const age = (Date.now() - startTime) / 1000;
+      if (age < MAX_POLL_S) {
+        activeJobId = jobId;
+        elapsedSec  = Math.floor(age);
+        showPill();
+        startElapsedTick();
+        schedulePoll();
+      } else {
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+    } catch(e) { sessionStorage.removeItem(STORAGE_KEY); }
+  }
+
+  // ── Public API — called from predict page ──
+  window.startGlobalJob = function(jobId) {
+    activeJobId = jobId;
+    elapsedSec  = 0;
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+      jobId, startTime: Date.now()
+    }));
+    showPill();
+    startElapsedTick();
+    schedulePoll();
+  };
+
+  // ── Pill UI ──
+  function showPill() {
+    document.getElementById('global-pill').classList.add('visible');
+    updatePillLabel();
+  }
+  function hidePill() {
+    document.getElementById('global-pill').classList.remove('visible');
+  }
+  function updatePillLabel() {
+    document.getElementById('global-pill-label').textContent = 'Analyzing URL...';
+    const min  = Math.floor(elapsedSec / 60);
+    const sec  = elapsedSec % 60;
+    document.getElementById('global-pill-elapsed').textContent =
+      min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+  }
+
+  function startElapsedTick() {
+    clearInterval(elapsedTimer);
+    elapsedTimer = setInterval(() => {
+      elapsedSec++;
+      updatePillLabel();
+      if (elapsedSec >= MAX_POLL_S) cancelJob('Timed out after 5 minutes.');
+    }, 1000);
+  }
+
+  // ── Polling ──
+  function schedulePoll() {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(doPoll, POLL_MS);
+  }
+
+  function doPoll() {
+    if (!activeJobId) return;
+    fetch(`/predict/status/${activeJobId}/`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => {
+      if (r.status === 401) { cancelJob('Session expired. Please log in again.'); return null; }
+      if (r.status === 404) { cancelJob('Job not found.'); return null; }
+      return r.json();
+    })
+    .then(data => {
+      if (!data) return;
+      if (data.status === 'done')    { onJobDone(data); }
+      else if (data.status === 'error') { onJobError(data.error || 'Prediction failed.'); }
+      else { schedulePoll(); }   // still pending/running — poll again
+    })
+    .catch(() => schedulePoll());  // network glitch — retry
+  }
+
+  // ── Completion ──
+  function onJobDone(data) {
+    stopPoll();
+    sessionStorage.removeItem(STORAGE_KEY);
+    hidePill();
+
+    // Populate modal
+    const isPhish = data.is_phishing;
+    const overlay = document.getElementById('result-modal-overlay');
+
+    const icon = document.getElementById('rmi-icon');
+    icon.style.background = isPhish ? 'rgba(252,129,129,0.12)' : 'rgba(72,187,120,0.12)';
+    icon.style.border     = `1px solid ${isPhish?'rgba(252,129,129,0.3)':'rgba(72,187,120,0.3)'}`;
+    icon.style.color      = isPhish ? 'var(--red)' : 'var(--green)';
+    icon.innerHTML        = isPhish
+      ? '<i class="ph ph-warning-diamond"></i>'
+      : '<i class="ph ph-shield-check"></i>';
+
+    document.getElementById('rmi-verdict').innerHTML =
+      `<span style="color:${isPhish?'var(--red)':'var(--green)'}">${data.result}</span>`;
+    document.getElementById('rmi-time').textContent  = `Analyzed at ${data.checked_at}`;
+    document.getElementById('rmi-url').textContent   = data.url;
+
+    // Accuracy bars
+    const bars = document.getElementById('rmi-bars');
+    bars.innerHTML = '';
+    if (data.model_accuracies && Object.keys(data.model_accuracies).length) {
+      Object.entries(data.model_accuracies)
+        .sort((a,b) => b[1]-a[1])
+        .forEach(([name, acc]) => {
+          bars.innerHTML += `
+            <div style="margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:5px;">
+                <span>${name}</span>
+                <span style="font-family:var(--font-mono);color:var(--cyan);">${acc}%</span>
+              </div>
+              <div style="height:6px;background:var(--bg-2);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${acc}%;background:var(--cyan);border-radius:3px;"></div>
+              </div>
+            </div>`;
+        });
+    }
+
+    overlay.classList.add('open');
+    overlay.style.borderColor = isPhish ? 'rgba(252,129,129,0.3)' : 'rgba(72,187,120,0.3)';
+
+    showToast(`Result: ${data.result}`, isPhish ? 'error' : 'success', 6000);
+
+    // Notify predict page if it's still open
+    if (window.onGlobalJobDone) window.onGlobalJobDone(data);
+  }
+
+  function onJobError(msg) {
+    stopPoll();
+    sessionStorage.removeItem(STORAGE_KEY);
+    hidePill();
+    showToast(`Analysis failed: ${msg}`, 'error', 6000);
+    if (window.onGlobalJobError) window.onGlobalJobError(msg);
+  }
+
+  function cancelJob(reason) {
+    stopPoll();
+    sessionStorage.removeItem(STORAGE_KEY);
+    activeJobId = null;
+    hidePill();
+    if (reason) showToast(reason, 'error', 5000);
+    if (window.onGlobalJobCancelled) window.onGlobalJobCancelled(reason);
+  }
+
+  function stopPoll() {
+    clearTimeout(pollTimer);
+    clearInterval(elapsedTimer);
+    activeJobId = null;
+  }
+
+  // ── Cancel button ──
+  document.getElementById('global-pill-cancel').addEventListener('click', () => {
+    cancelJob('');
+  });
+
+  // ── Modal close ──
+  window.closeResultModal = function() {
+    document.getElementById('result-modal-overlay').classList.remove('open');
+  };
+  document.getElementById('result-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeResultModal();
+  });
+
+})();
+</script>
+{% endif %}
+
 </body>
 </html>
