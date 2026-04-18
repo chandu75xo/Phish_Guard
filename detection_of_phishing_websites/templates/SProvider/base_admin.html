@@ -1,23 +1,37 @@
 {% extends 'base.html' %}
+
 {% block navbar %}
 <nav class="navbar">
   <div class="navbar-inner">
     <a href="{% url 'admin_dashboard' %}" class="navbar-brand">
       <div class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 6.5V12C3 16.95 7.02 21.54 12 23C16.98 21.54 21 16.95 21 12V6.5L12 2Z" fill="currentColor" opacity="0.9"/><path d="M8.5 12L10.8 14.3L15.5 9.5" stroke="var(--bg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       Phish<span>Guard</span>
-      <span style="font-size:0.62rem;color:var(--orange);margin-left:6px;font-family:var(--font-display);letter-spacing:0.1em;background:rgba(246,173,85,0.1);padding:2px 8px;border-radius:4px;border:1px solid rgba(246,173,85,0.2);">ADMIN</span>
+      <span style="font-size:0.6rem;color:var(--orange);margin-left:6px;font-family:var(--font-display);letter-spacing:0.1em;background:rgba(246,173,85,0.1);padding:2px 8px;border-radius:4px;border:1px solid rgba(246,173,85,0.2);">ADMIN</span>
     </a>
     <div class="nav-links">
-      <a href="{% url 'landing' %}" class="hide-mobile" style="font-size:0.82rem;color:var(--text-dim);"><i class="ph ph-arrow-left"></i> Main Site</a>
+      <a href="{% url 'landing' %}" style="font-size:0.82rem;color:var(--text-dim);"><i class="ph ph-arrow-left"></i> Main Site</a>
       <a href="{% url 'admin_logout' %}" class="btn-nav" style="background:var(--orange);"><i class="ph ph-sign-out"></i> Logout</a>
     </div>
+    <!-- Mobile admin menu toggle -->
+    <button class="hamburger" id="hamburger-btn" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
 {% endblock %}
 
 {% block content %}
+<style>
+/* Override mobile drawer for admin */
+@media(max-width:900px){
+  .admin-sidebar-toggle { display:flex !important; }
+  #admin-sidebar { display:none; }
+  #admin-sidebar.open { display:block; position:fixed; top:var(--navbar-h); left:0; bottom:0; width:260px; z-index:180; box-shadow:4px 0 24px rgba(0,0,0,0.5); overflow-y:auto; }
+  .sidebar-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:179; top:var(--navbar-h); }
+  .sidebar-backdrop.show { display:block; }
+}
+</style>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 <div class="app-layout">
-  <aside class="sidebar">
+  <aside class="sidebar" id="admin-sidebar">
     <div class="sidebar-section">
       <div class="sidebar-label">Overview</div>
       <a href="{% url 'admin_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
@@ -48,10 +62,40 @@
         <span class="icon"><i class="ph ph-download-simple"></i></span> Download Excel
       </a>
     </div>
+    <div class="sidebar-section" style="margin-top:auto; padding-top:16px; border-top:1px solid var(--border);">
+      <a href="{% url 'admin_logout' %}" class="sidebar-link" style="color:var(--red);">
+        <span class="icon"><i class="ph ph-sign-out"></i></span> Logout
+      </a>
+    </div>
   </aside>
+
   <main class="main-content">
     {% if messages %}<ul class="messages mb-4">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
     {% block admin_content %}{% endblock %}
   </main>
 </div>
+
+<script>
+// Admin sidebar toggle on mobile
+const adminSidebar = document.getElementById('admin-sidebar');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+const ham = document.getElementById('hamburger-btn');
+
+function toggleAdminSidebar() {
+  const isOpen = adminSidebar.classList.toggle('open');
+  ham.classList.toggle('open', isOpen);
+  sidebarBackdrop.classList.toggle('show', isOpen);
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+function closeAdminSidebar() {
+  adminSidebar.classList.remove('open');
+  ham.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+ham.addEventListener('click', toggleAdminSidebar);
+sidebarBackdrop.addEventListener('click', closeAdminSidebar);
+adminSidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeAdminSidebar));
+</script>
 {% endblock %}

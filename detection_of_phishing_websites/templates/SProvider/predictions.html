@@ -31,3 +31,14 @@
   </table>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+// Add copy buttons to mobile cards after load
+document.querySelectorAll('.mobile-card-url').forEach(el => {
+  el.style.cursor = 'pointer';
+  el.title = 'Click to copy';
+  el.addEventListener('click', () => copyToClipboard(el.textContent.trim(), 'URL'));
+});
+</script>
+{% endblock %}

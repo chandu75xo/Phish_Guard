@@ -7,30 +7,70 @@
     <h1>Scan History</h1>
     <p>All {{ total }} URL checks you've performed.</p>
   </div>
+
   <div class="flex gap-2 mb-6 animate-fadeup delay-1" style="flex-wrap:wrap;align-items:center;">
     <a href="?filter=all" class="btn {% if filter_type == 'all' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm"><i class="ph ph-list"></i> All ({{ total }})</a>
     <a href="?filter=phishing" class="btn {% if filter_type == 'phishing' %}btn-danger{% else %}btn-secondary{% endif %} btn-sm"><i class="ph ph-warning-diamond"></i> Phishing</a>
     <a href="?filter=safe" class="btn {% if filter_type == 'safe' %}btn-success{% else %}btn-secondary{% endif %} btn-sm"><i class="ph ph-check-circle"></i> Safe</a>
-    <a href="{% url 'predict' %}" class="btn btn-ghost btn-sm" style="margin-left:auto;"><i class="ph ph-plus"></i> Check New URL</a>
+    <a href="{% url 'predict' %}" class="btn btn-ghost btn-sm" style="margin-left:auto;"><i class="ph ph-plus"></i> New Check</a>
   </div>
+
   {% if predictions %}
+  <!-- Desktop Table -->
   <div class="table-wrap animate-fadeup delay-2">
     <table>
-      <thead><tr><th>#</th><th>URL</th><th>Result</th><th>Date & Time</th></tr></thead>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>URL</th>
+          <th>Result</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
       <tbody>
         {% for p in predictions %}
         <tr>
-          <td class="text-muted mono" style="font-size:0.78rem;">{{ forloop.counter }}</td>
+          <td class="text-muted mono" style="font-size:0.75rem;">{{ forloop.counter }}</td>
           <td><span class="url-cell" title="{{ p.url }}">{{ p.url }}</span></td>
-          <td><span class="badge {% if p.is_phishing %}badge-danger{% else %}badge-success{% endif %}">
-            <i class="ph {% if p.is_phishing %}ph-warning-diamond{% else %}ph-check-circle{% endif %}"></i> {{ p.result }}
-          </span></td>
-          <td class="text-muted mono" style="font-size:0.78rem;">{{ p.checked_at|date:"M d, Y" }}<br>{{ p.checked_at|time:"H:i" }}</td>
+          <td>
+            <span class="badge {% if p.is_phishing %}badge-danger{% else %}badge-success{% endif %}">
+              <i class="ph {% if p.is_phishing %}ph-warning-diamond{% else %}ph-check-circle{% endif %}"></i>
+              {{ p.result }}
+            </span>
+          </td>
+          <td class="text-muted mono" style="font-size:0.75rem;">{{ p.checked_at|date:"M d, Y H:i" }}</td>
+          <td>
+            <button onclick="copyToClipboard('{{ p.url|escapejs }}','URL')" class="btn btn-ghost btn-icon btn-sm" title="Copy URL">
+              <i class="ph ph-copy"></i>
+            </button>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <!-- Mobile Cards -->
+  <div class="mobile-cards animate-fadeup delay-2">
+    {% for p in predictions %}
+    <div class="mobile-card">
+      <div class="mobile-card-header">
+        <span class="mobile-card-url">{{ p.url }}</span>
+        <span class="badge {% if p.is_phishing %}badge-danger{% else %}badge-success{% endif %}" style="flex-shrink:0;">
+          {{ p.result }}
+        </span>
+      </div>
+      <div class="mobile-card-meta">
+        <span class="mobile-card-time"><i class="ph ph-clock" style="margin-right:4px;"></i>{{ p.checked_at|date:"M d, Y" }}</span>
+        <button onclick="copyToClipboard('{{ p.url|escapejs }}','URL')" class="btn btn-ghost btn-icon btn-sm">
+          <i class="ph ph-copy"></i>
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
   {% else %}
   <div class="empty-state animate-fadeup delay-2">
     <div class="empty-icon"><i class="ph ph-clipboard-text"></i></div>
