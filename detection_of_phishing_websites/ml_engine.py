@@ -19,6 +19,23 @@ from sklearn.metrics import accuracy_score
 
 logger = logging.getLogger(__name__)
 
+
+def normalize_url(url):
+    """
+    Put every URL in the same shape before it reaches the model.
+    The training CSV has no 'https://' and about 2x more 'www.' on safe URLs,
+    so without this the model learns 'www = safe' and 'https = unseen' shortcuts
+    instead of looking at the real domain and path.
+    """
+    u = str(url).strip().lower()
+    for prefix in ('https://', 'http://', 'ftp://'):
+        if u.startswith(prefix):
+            u = u[len(prefix):]
+            break
+    if u.startswith('www.'):
+        u = u[4:]
+    return u
+
 # ── In-memory model cache ─────────────────────────────────────────────────────
 _cache_lock    = threading.Lock()
 _cached_cv     = None   # CountVectorizer (fitted on training data)
@@ -53,7 +70,7 @@ def _train():
     data = data.dropna(subset=['Results'])
     data['Results'] = data['Results'].astype(int)
 
-    x_raw = data['URL'].astype(str)
+    x_raw = data['URL'].astype(str).map(normalize_url)
     y     = data['Results']
 
     cv    = CountVectorizer(max_features=10000)   # cap features to reduce memory
@@ -154,7 +171,7 @@ def predict_url(url_text):
     """
     cv, clf, accuracies = get_or_train()
 
-    url_vector     = cv.transform([str(url_text)]).toarray()
+    url_vector     = cv.transform([normalize_url(url_text)]).toarray()
     raw_prediction = clf.predict(url_vector)[0]
 
     label = 'Phishing' if int(raw_prediction) == 0 else 'Non Phishing'
