@@ -5,8 +5,8 @@ services:
     plan: free
     region: singapore   # closest Render region to India; create your Neon DB in Singapore too
     buildCommand: "pip install -r requirements.txt && cd detection_of_phishing_websites && python manage.py migrate && python manage.py collectstatic --noinput"
-    # ONE worker: the trained models live in that process's memory (~200 MB each).
-    # Threads give concurrency without duplicating the models.
+    # One worker avoids loading a separate model copy into multiple worker processes.
+    # The pre-trained artifact is loaded into RAM; model training never runs at startup.
     startCommand: "cd detection_of_phishing_websites && gunicorn detection_of_phishing_websites.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120"
     envVars:
       - key: SECRET_KEY
@@ -16,7 +16,7 @@ services:
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
       - key: PYTHON_VERSION
-        value: "3.10.11"
+        value: "3.12.8"
       - key: DATABASE_URL      # paste your Neon connection string in the dashboard
         sync: false
       - key: ADMIN_USERNAME

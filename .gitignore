@@ -32,3 +32,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Do not ignore detection_of_phishing_websites/ml_artifacts/phishguard_model.joblib:
+# this trusted, version-pinned artifact must be committed for Render deployments.

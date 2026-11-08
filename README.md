@@ -566,3 +566,9 @@ Released for educational and research purposes. Based on:
 <div align="center">
 Built with Django · scikit-learn · Phosphor Icons · Oxanium
 </div>
+
+## Pre-trained model deployment
+
+See [MODEL_TRAINING_AND_RENDER.md](MODEL_TRAINING_AND_RENDER.md) for the local
+training command, generated Joblib artifact, pinned runtime requirements, and
+Render/Neon deployment steps. Model training is no longer triggered on startup.

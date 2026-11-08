@@ -1,4 +1,5 @@
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 from decouple import config, Csv
 import dj_database_url
 
@@ -50,7 +51,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'detection_of_phishing_websites.wsgi.application'
 
 # ── Database ──────────────────────────────────────────────────────────────────
-_db_url = config('DATABASE_URL', default=None)
+_db_url = config('DATABASE_URL', default='').strip()
 if _db_url:
     DATABASES = {
         'default': dj_database_url.parse(
@@ -59,13 +60,20 @@ if _db_url:
             conn_health_checks=True,
         )
     }
-else:
+elif DEBUG:
+    # SQLite is for local development only. Production must explicitly provide
+    # DATABASE_URL so a missing Render variable cannot silently split app data.
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+else:
+    raise ImproperlyConfigured(
+        'DATABASE_URL is required when DEBUG=False. Configure the Neon PostgreSQL '
+        'connection string in the Render service environment.'
+    )
 
 # ── Session ───────────────────────────────────────────────────────────────────
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
@@ -127,3 +135,7 @@ LOGOUT_REDIRECT_URL = '/'
 
 # CSV dataset path
 DATASET_PATH = BASE_DIR / 'Website_urls.csv'
+ML_MODEL_PATH = Path(config(
+    'ML_MODEL_PATH',
+    default=str(BASE_DIR / 'ml_artifacts' / 'phishguard_model.joblib'),
+))
