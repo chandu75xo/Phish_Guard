@@ -139,21 +139,12 @@ function quickCheck() {
   .then(data => {
     btn.disabled = false;
     btn.innerHTML = '<i class="ph ph-magnifying-glass"></i> Analyze URL';
-    result.style.display = 'block';
     if (data.success) {
-      const isPhish = data.is_phishing;
-      result.innerHTML = `
-        <div style="padding:14px 16px;border-radius:10px;border:1px solid ${isPhish?'rgba(252,129,129,0.3)':'rgba(72,187,120,0.3)'};background:${isPhish?'rgba(252,129,129,0.08)':'rgba(72,187,120,0.08)'};">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <i class="ph ${isPhish?'ph-warning-diamond':'ph-shield-check'}" style="font-size:1.4rem;color:${isPhish?'var(--red)':'var(--green)'}"></i>
-            <div>
-              <div style="font-weight:700;color:${isPhish?'var(--red)':'var(--green)'};font-size:0.95rem;">${data.result}</div>
-              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">${data.checked_at}</div>
-            </div>
-          </div>
-        </div>`;
-      showToast(`Result: ${data.result}`, isPhish ? 'error' : 'success');
-      setTimeout(() => location.reload(), 2500);
+      // The server now runs predictions as background jobs. Hand the job to the
+      // global tracker (base.html), which polls and shows the result popup.
+      result.style.display = 'none';
+      if (window.startGlobalJob) window.startGlobalJob(data.job_id);
+      showToast('Analysis started - result popup coming up', 'info', 3000);
     } else {
       result.style.display = 'none';
       showToast(data.error || 'Prediction failed', 'error');

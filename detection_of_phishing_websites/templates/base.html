@@ -759,7 +759,9 @@ window.copyToClipboard = function(text, label = 'Copied') {
 (function() {
   // ── Constants ──
   const STORAGE_KEY  = 'pg_active_job';
-  const POLL_MS      = 3000;
+  const POLL_FAST_MS = 400;   // first few polls: predictions usually finish in milliseconds
+  const POLL_MS      = 1500;  // then back off
+  let   pollCount    = 0;
   const MAX_POLL_S   = 300;  // stop polling after 5 min
 
   let pollTimer     = null;
@@ -789,6 +791,7 @@ window.copyToClipboard = function(text, label = 'Copied') {
   window.startGlobalJob = function(jobId) {
     activeJobId = jobId;
     elapsedSec  = 0;
+    pollCount   = 0;
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
       jobId, startTime: Date.now()
     }));
@@ -825,7 +828,7 @@ window.copyToClipboard = function(text, label = 'Copied') {
   // ── Polling ──
   function schedulePoll() {
     clearTimeout(pollTimer);
-    pollTimer = setTimeout(doPoll, POLL_MS);
+    pollTimer = setTimeout(doPoll, pollCount++ < 4 ? POLL_FAST_MS : POLL_MS);
   }
 
   function doPoll() {

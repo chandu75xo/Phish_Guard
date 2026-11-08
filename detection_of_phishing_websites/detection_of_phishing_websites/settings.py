@@ -84,7 +84,7 @@ def _build_csrf_origins(allowed_hosts):
         if host in ('*', ''):
             continue
         if host.startswith('.'):
-            host = host[1:]
+            host = '*.' + host[1:]          # ".onrender.com" -> "*.onrender.com"
         origins.append(f'http://{host}')
         origins.append(f'https://{host}')
     return list(dict.fromkeys(origins))   # deduplicate, preserve order
@@ -92,6 +92,13 @@ def _build_csrf_origins(allowed_hosts):
 _allowed = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 ALLOWED_HOSTS = _allowed
 CSRF_TRUSTED_ORIGINS = _build_csrf_origins(_allowed)
+
+# Hosts like Render terminate HTTPS at a proxy and forward plain HTTP to gunicorn.
+# This header tells Django the original request was HTTPS (needed for CSRF checks).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

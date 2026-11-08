@@ -120,6 +120,17 @@ def _train():
     return cv, voting_clf, accuracy_results
 
 
+def train_all_models():
+    """
+    Force a fresh training run and refresh the in-memory cache.
+    Used by the admin 'Train Models' page.
+    Returns (accuracy_results, count_vectorizer, voting_classifier).
+    """
+    with _cache_lock:
+        cv, clf, acc = _train()
+    return acc, cv, clf
+
+
 def get_or_train():
     """
     Return cached models, training once if not yet done.

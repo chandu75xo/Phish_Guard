@@ -10,8 +10,14 @@ from openpyxl.styles import Font, PatternFill, Alignment
 
 from Remote_User.models import URLPrediction, ModelAccuracy, UserProfile
 
-ADMIN_USERNAME = 'Admin'
-ADMIN_PASSWORD = 'Admin'
+import secrets
+from decouple import config
+from django.conf import settings
+
+# Set ADMIN_USERNAME / ADMIN_PASSWORD in the environment for any public deploy.
+# The Admin/Admin fallback only exists while DEBUG=True (local development).
+ADMIN_USERNAME = config('ADMIN_USERNAME', default='Admin' if settings.DEBUG else '')
+ADMIN_PASSWORD = config('ADMIN_PASSWORD', default='Admin' if settings.DEBUG else '')
 
 
 # ─────────────────────────────────────────────────────────
@@ -38,7 +44,9 @@ def admin_login(request):
     if request.method == 'POST':
         username = request.POST.get('username', '')
         password = request.POST.get('password', '')
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        if (ADMIN_USERNAME and ADMIN_PASSWORD
+                and secrets.compare_digest(username, ADMIN_USERNAME)
+                and secrets.compare_digest(password, ADMIN_PASSWORD)):
             request.session['is_admin'] = True
             return redirect('admin_dashboard')
         messages.error(request, 'Invalid admin credentials.')
